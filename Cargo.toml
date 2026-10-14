@@ -1,0 +1,25 @@
+[package]
+name = "attestchain"
+version = "0.0.1"
+edition = "2021"
+license = "MIT"
+description = "End-to-end chain-of-custody auditor for TEE-attested LLM inference endpoints (Intel TDX, AMD SEV-SNP)."
+repository = "https://github.com/Intermountainh8ter/attestchain"
+keywords = ["tee", "tdx", "sev-snp", "attestation", "llm"]
+categories = ["command-line-utilities", "cryptography"]
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+sha2 = "0.10"
+hex = "0.4"
+
+[[bin]]
+name = "attestchain"
+path = "src/main.rs"
+
+[lib]
+name = "attestchain"
+path = "src/lib.rs"
