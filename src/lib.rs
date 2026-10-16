@@ -219,6 +219,60 @@ pub fn verify_chain(
     })
 }
 
+/// One row of the leaderboard: aggregate chain-of-custody outcome for
+/// an endpoint across a sample of audited calls. Pre-reg §4 requires
+/// that leaderboard numbers derive from committed `results/*.json`;
+/// `LeaderboardRow` is that derived type.
+///
+/// Pre-reg §2 is explicit: each `ChainReport` audits one call. A row
+/// publishes the sample's counts and names the sample size (`n`); it
+/// never claims lifetime behavior for the endpoint. Pre-reg §3's
+/// `PendingCertChain` outcomes are reported separately — they
+/// contribute to `n_pending` and keep the row off the "attested" line.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct LeaderboardRow {
+    pub endpoint: String,
+    pub vendor: Vendor,
+    pub n: usize,
+    pub n_attested: usize,
+    pub n_broken: usize,
+    pub n_pending_cert_chain: usize,
+    /// Set only when every call in the sample was `Attested`. Pre-reg
+    /// §3: a sample containing even one `PendingCertChain` cannot land
+    /// on the leaderboard as "attested", so this flag refuses it.
+    pub leaderboard_eligible: bool,
+}
+
+/// Build a leaderboard row from the audited sample. `vendor` must be
+/// consistent across the sample; a mismatch panics (sampling the same
+/// endpoint with two vendors is a caller error).
+pub fn leaderboard_row(
+    endpoint: &str,
+    vendor: Vendor,
+    reports: &[ChainReport],
+) -> LeaderboardRow {
+    let n = reports.len();
+    let mut n_attested = 0;
+    let mut n_broken = 0;
+    let mut n_pending = 0;
+    for r in reports {
+        match r.verdict {
+            Verdict::Attested => n_attested += 1,
+            Verdict::Broken => n_broken += 1,
+            Verdict::PendingCertChain => n_pending += 1,
+        }
+    }
+    LeaderboardRow {
+        endpoint: endpoint.into(),
+        vendor,
+        n,
+        n_attested,
+        n_broken,
+        n_pending_cert_chain: n_pending,
+        leaderboard_eligible: n > 0 && n_attested == n,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -344,5 +398,63 @@ mod tests {
             policy_sha256_hex: "".into(),
         };
         assert_eq!(canonical_policy_bytes(&a), canonical_policy_bytes(&b));
+    }
+
+    fn clean_report() -> ChainReport {
+        let pol = p("deadbeef");
+        verify_chain(&pol, &q(&pol, b"in", b"out", "deadbeef"), NONCE, b"in", b"out")
+            .expect("audit should run")
+    }
+
+    #[test]
+    fn leaderboard_row_eligible_only_when_all_attested() {
+        let a = ChainReport {
+            policy_integrity: true,
+            measurement_matches: true,
+            input_matches_quote: true,
+            output_matches_quote: true,
+            nonce_matches: true,
+            cert_chain_verified: true,
+            verdict: Verdict::Attested,
+        };
+        let row = leaderboard_row("ep", Vendor::IntelTdx, &[a.clone(), a.clone(), a]);
+        assert_eq!(row.n, 3);
+        assert_eq!(row.n_attested, 3);
+        assert!(row.leaderboard_eligible);
+    }
+
+    #[test]
+    fn leaderboard_row_blocked_when_any_pending_cert_chain() {
+        let pending = clean_report(); // PendingCertChain
+        let row = leaderboard_row("ep", Vendor::IntelTdx, &[pending]);
+        assert_eq!(row.n_pending_cert_chain, 1);
+        assert!(!row.leaderboard_eligible, "pre-reg §3: pending blocks row");
+    }
+
+    #[test]
+    fn leaderboard_row_blocked_when_any_broken() {
+        let a = ChainReport {
+            policy_integrity: true,
+            measurement_matches: true,
+            input_matches_quote: true,
+            output_matches_quote: true,
+            nonce_matches: true,
+            cert_chain_verified: true,
+            verdict: Verdict::Attested,
+        };
+        let broken = ChainReport {
+            verdict: Verdict::Broken,
+            ..a.clone()
+        };
+        let row = leaderboard_row("ep", Vendor::IntelTdx, &[a, broken]);
+        assert_eq!(row.n_broken, 1);
+        assert!(!row.leaderboard_eligible);
+    }
+
+    #[test]
+    fn leaderboard_row_empty_sample_is_ineligible() {
+        let row = leaderboard_row("ep", Vendor::IntelTdx, &[]);
+        assert_eq!(row.n, 0);
+        assert!(!row.leaderboard_eligible);
     }
 }

@@ -6,7 +6,7 @@
 //! a running TEE-attested endpoint is TODO; the pre-registration locks
 //! the chain check before any live verification ships.
 
-use attestchain::{verify_chain, Policy, Quote};
+use attestchain::{leaderboard_row, verify_chain, ChainReport, Policy, Quote, Vendor};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -33,6 +33,20 @@ enum Cmd {
         /// is empty.
         #[arg(long)]
         nonce: String,
+    },
+    /// Build one leaderboard row from a directory of committed
+    /// `ChainReport` JSONs (one per audited call). Pre-reg §4: no
+    /// numbers in the leaderboard that are not produced from
+    /// `results/*.json`. Exits 1 when the sample is not
+    /// leaderboard-eligible (any PendingCertChain or Broken).
+    Leaderboard {
+        /// Directory of ChainReport JSON files to aggregate.
+        reports_dir: std::path::PathBuf,
+        #[arg(long)]
+        endpoint: String,
+        /// `intel-tdx` or `amd-sev-snp`.
+        #[arg(long)]
+        vendor: String,
     },
     /// Print the version banner and exit.
     Version,
@@ -62,6 +76,39 @@ fn main() -> anyhow::Result<()> {
                     eprintln!("{e}");
                     std::process::exit(2);
                 }
+            }
+        }
+        Cmd::Leaderboard {
+            reports_dir,
+            endpoint,
+            vendor,
+        } => {
+            let vendor = match vendor.to_ascii_lowercase().as_str() {
+                "intel-tdx" | "tdx" => Vendor::IntelTdx,
+                "amd-sev-snp" | "sev-snp" | "sevsnp" => Vendor::AmdSevSnp,
+                other => anyhow::bail!(
+                    "unknown vendor: {other}. Use `intel-tdx` or `amd-sev-snp`."
+                ),
+            };
+            let mut reports: Vec<ChainReport> = Vec::new();
+            let mut entries: Vec<std::path::PathBuf> = std::fs::read_dir(&reports_dir)?
+                .filter_map(|e| e.ok())
+                .map(|e| e.path())
+                .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("json"))
+                .collect();
+            entries.sort();
+            if entries.is_empty() {
+                anyhow::bail!("no .json files in {}", reports_dir.display());
+            }
+            for p in &entries {
+                let r: ChainReport = load_json(p)?;
+                reports.push(r);
+            }
+            let row = leaderboard_row(&endpoint, vendor, &reports);
+            let eligible = row.leaderboard_eligible;
+            println!("{}", serde_json::to_string_pretty(&row)?);
+            if !eligible {
+                std::process::exit(1);
             }
         }
         Cmd::Version => println!("attestchain {}", env!("CARGO_PKG_VERSION")),
