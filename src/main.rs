@@ -1,9 +1,10 @@
 //! attestchain CLI — scaffold.
 //!
-//! `verify` reads a policy, a quote, and the input/output bytes from disk
-//! and prints the chain report. The `verify-live` subcommand that pulls a
-//! quote from a running TEE-attested endpoint is TODO; the pre-registration
-//! locks the chain check before any live verification ships.
+//! `verify` reads a policy, a quote, the client-chosen nonce the client
+//! sent to the enclave, and the input/output bytes from disk, then prints
+//! the chain report. The `verify-live` subcommand that pulls a quote from
+//! a running TEE-attested endpoint is TODO; the pre-registration locks
+//! the chain check before any live verification ships.
 
 use attestchain::{verify_chain, Policy, Quote};
 use clap::{Parser, Subcommand};
@@ -27,6 +28,11 @@ enum Cmd {
         quote: std::path::PathBuf,
         input: std::path::PathBuf,
         output: std::path::PathBuf,
+        /// Hex-encoded client-chosen nonce the client sent to the
+        /// enclave. The audit refuses to run if the quote's bound nonce
+        /// is empty.
+        #[arg(long)]
+        nonce: String,
     },
     /// Print the version banner and exit.
     Version,
@@ -44,13 +50,19 @@ fn main() -> anyhow::Result<()> {
             quote,
             input,
             output,
+            nonce,
         } => {
             let p: Policy = load_json(&policy)?;
             let q: Quote = load_json(&quote)?;
             let i = std::fs::read(&input)?;
             let o = std::fs::read(&output)?;
-            let r = verify_chain(&p, &q, &i, &o);
-            println!("{}", serde_json::to_string_pretty(&r)?);
+            match verify_chain(&p, &q, &nonce, &i, &o) {
+                Ok(r) => println!("{}", serde_json::to_string_pretty(&r)?),
+                Err(e) => {
+                    eprintln!("{e}");
+                    std::process::exit(2);
+                }
+            }
         }
         Cmd::Version => println!("attestchain {}", env!("CARGO_PKG_VERSION")),
     }

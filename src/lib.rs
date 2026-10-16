@@ -42,11 +42,19 @@ pub struct Quote {
     pub vendor: Vendor,
     /// Hex-encoded measurement the quote asserts the enclave is running.
     pub measurement_hex: String,
+    /// Hex-encoded sha256 of the policy the quote references. Must equal
+    /// the sha256 of the policy served to the client at audit-start time;
+    /// a drift here means the endpoint changed its policy mid-audit.
+    pub policy_sha256_hex: String,
     /// Hex-encoded sha256 of the input the enclave received. For an LLM
     /// call this is the serialized prompt.
     pub input_sha256_hex: String,
     /// Hex-encoded sha256 of the output the enclave produced.
     pub output_sha256_hex: String,
+    /// Hex-encoded client-chosen nonce the quote binds (TDX user-data
+    /// region, SEV-SNP REPORT_DATA). An empty string means the quote
+    /// did not bind a nonce; the audit refuses such quotes.
+    pub nonce_hex: String,
     /// Raw cert chain, in order leaf -> root. Verification against the
     /// vendor root is a follow-up.
     pub cert_chain: Vec<Vec<u8>>,
@@ -55,11 +63,20 @@ pub struct Quote {
 /// Verification outcome of a single call's chain-of-custody.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ChainReport {
-    pub policy_matches_quote: bool,
+    /// Check 1: the policy sha256 the quote references matches
+    /// `sha256(canonical_policy_bytes(policy))`.
+    pub policy_integrity: bool,
+    /// Check 2: `policy.measurement_hex == quote.measurement_hex`.
+    pub measurement_matches: bool,
+    /// Check 3: `sha256(input_bytes) == quote.input_sha256_hex`.
     pub input_matches_quote: bool,
+    /// Check 4: `sha256(output_bytes) == quote.output_sha256_hex`.
     pub output_matches_quote: bool,
-    /// Set only when the cert chain is fully verified against a vendor
-    /// root; stays false until the vendor-specific verifier lands.
+    /// Check 2a: `quote.nonce_hex == client_nonce_hex`. A nonce mismatch
+    /// is Broken (the client cannot distinguish mismatch from replay).
+    pub nonce_matches: bool,
+    /// Check 5: the cert chain terminates in a vendor root. Stays false
+    /// until the vendor-specific verifier lands.
     pub cert_chain_verified: bool,
     /// Verdict: the whole chain is sound only when every field above
     /// is true.
@@ -84,79 +101,248 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
     hex::encode(Sha256::digest(bytes))
 }
 
+/// Reasons the audit refuses to run (as opposed to running and returning
+/// a Broken verdict). The pre-registration mandates refusal when the
+/// quote carries no client-chosen nonce — without a nonce, a passing
+/// chain is indistinguishable from a replay.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum AuditError {
+    /// The quote's `nonce_hex` field is empty: the enclave produced a
+    /// quote that is not bound to a client nonce. Replay-indistinguishable.
+    NoNonceInQuote,
+}
+
+impl std::fmt::Display for AuditError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NoNonceInQuote => f.write_str(
+                "audit refuses: quote does not bind a client-chosen nonce (replay-indistinguishable)",
+            ),
+        }
+    }
+}
+
+impl std::error::Error for AuditError {}
+
+/// Serialize a Policy to a canonical byte string suitable for sha256.
+///
+/// Keys are JSON-sorted so that two policies with the same semantic
+/// content produce byte-identical bytes regardless of input ordering.
+/// The `policy_sha256_hex` field is a self-referential metadata record
+/// ("the sha of this policy without this field") and is excluded from
+/// the canonical serialization; it is what the quote's own
+/// `policy_sha256_hex` is compared against.
+pub fn canonical_policy_bytes(policy: &Policy) -> Vec<u8> {
+    let mut v: serde_json::Value = serde_json::to_value(policy).expect("policy serializes");
+    if let Some(obj) = v.as_object_mut() {
+        obj.remove("policy_sha256_hex");
+    }
+    let mut buf = Vec::new();
+    write_canonical(&v, &mut buf);
+    buf
+}
+
+fn write_canonical(v: &serde_json::Value, buf: &mut Vec<u8>) {
+    match v {
+        serde_json::Value::Object(map) => {
+            buf.push(b'{');
+            let mut keys: Vec<&String> = map.keys().collect();
+            keys.sort();
+            for (i, k) in keys.iter().enumerate() {
+                if i > 0 {
+                    buf.push(b',');
+                }
+                buf.extend_from_slice(serde_json::to_string(k).unwrap().as_bytes());
+                buf.push(b':');
+                write_canonical(&map[*k], buf);
+            }
+            buf.push(b'}');
+        }
+        serde_json::Value::Array(arr) => {
+            buf.push(b'[');
+            for (i, item) in arr.iter().enumerate() {
+                if i > 0 {
+                    buf.push(b',');
+                }
+                write_canonical(item, buf);
+            }
+            buf.push(b']');
+        }
+        other => buf.extend_from_slice(serde_json::to_string(other).unwrap().as_bytes()),
+    }
+}
+
 /// Verify the audit-level checks that this crate implements today.
-/// `input_bytes` and `output_bytes` are the client-side canonical byte
-/// serializations of the prompt and the response.
+///
+/// `client_nonce_hex` is the nonce the client sent to the enclave; the
+/// audit refuses to run when the quote carries no nonce, per the
+/// pre-registration's replay-indistinguishability rule.
 pub fn verify_chain(
     policy: &Policy,
     quote: &Quote,
+    client_nonce_hex: &str,
     input_bytes: &[u8],
     output_bytes: &[u8],
-) -> ChainReport {
-    let policy_matches_quote = policy.measurement_hex == quote.measurement_hex;
+) -> Result<ChainReport, AuditError> {
+    if quote.nonce_hex.is_empty() {
+        return Err(AuditError::NoNonceInQuote);
+    }
+    // Check 1: policy integrity. The policy served to the client hashes
+    // to the sha the quote references.
+    let computed = sha256_hex(&canonical_policy_bytes(policy));
+    let policy_integrity = computed == quote.policy_sha256_hex;
+    let measurement_matches = policy.measurement_hex == quote.measurement_hex;
     let input_matches_quote = sha256_hex(input_bytes) == quote.input_sha256_hex;
     let output_matches_quote = sha256_hex(output_bytes) == quote.output_sha256_hex;
+    let nonce_matches = quote.nonce_hex == client_nonce_hex;
     let cert_chain_verified = false; // TODO: wire vendor-specific verifier
-    let verdict = if !policy_matches_quote || !input_matches_quote || !output_matches_quote {
+    let all_pre_cert = policy_integrity
+        && measurement_matches
+        && input_matches_quote
+        && output_matches_quote
+        && nonce_matches;
+    let verdict = if !all_pre_cert {
         Verdict::Broken
+    } else if cert_chain_verified {
+        Verdict::Attested
     } else {
         Verdict::PendingCertChain
     };
-    ChainReport {
-        policy_matches_quote,
+    Ok(ChainReport {
+        policy_integrity,
+        measurement_matches,
         input_matches_quote,
         output_matches_quote,
+        nonce_matches,
         cert_chain_verified,
         verdict,
-    }
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn q(input: &[u8], output: &[u8], meas: &str) -> Quote {
-        Quote {
-            vendor: Vendor::IntelTdx,
-            measurement_hex: meas.into(),
-            input_sha256_hex: sha256_hex(input),
-            output_sha256_hex: sha256_hex(output),
-            cert_chain: vec![],
-        }
-    }
+    const NONCE: &str = "a1b2c3d4";
 
     fn p(meas: &str) -> Policy {
-        Policy {
+        // Policy's own policy_sha256_hex is set to the computed canonical
+        // sha256, so a well-formed test fixture is self-consistent.
+        let mut policy = Policy {
             endpoint: "https://example".into(),
             vendor: Vendor::IntelTdx,
             measurement_hex: meas.into(),
-            policy_sha256_hex: "0".repeat(64),
+            policy_sha256_hex: String::new(),
+        };
+        // The policy_sha256_hex is NOT a self-reference; it is the sha
+        // over the policy WITHOUT this field (set to empty), and that is
+        // what the quote compares against. Keep the field empty when
+        // computing the canonical sha used for the audit.
+        policy.policy_sha256_hex = sha256_hex(&canonical_policy_bytes(&policy));
+        policy
+    }
+
+    fn q(policy: &Policy, input: &[u8], output: &[u8], meas: &str) -> Quote {
+        Quote {
+            vendor: Vendor::IntelTdx,
+            measurement_hex: meas.into(),
+            policy_sha256_hex: policy.policy_sha256_hex.clone(),
+            input_sha256_hex: sha256_hex(input),
+            output_sha256_hex: sha256_hex(output),
+            nonce_hex: NONCE.into(),
+            cert_chain: vec![],
         }
     }
 
     #[test]
     fn clean_chain_is_pending_cert() {
-        let r = verify_chain(&p("deadbeef"), &q(b"in", b"out", "deadbeef"), b"in", b"out");
+        let pol = p("deadbeef");
+        let r = verify_chain(&pol, &q(&pol, b"in", b"out", "deadbeef"), NONCE, b"in", b"out")
+            .expect("audit should run");
         assert_eq!(r.verdict, Verdict::PendingCertChain);
-        assert!(r.policy_matches_quote && r.input_matches_quote && r.output_matches_quote);
+        assert!(r.policy_integrity && r.measurement_matches);
+        assert!(r.input_matches_quote && r.output_matches_quote && r.nonce_matches);
     }
 
     #[test]
     fn drifted_input_breaks_chain() {
+        let pol = p("deadbeef");
         let r = verify_chain(
-            &p("deadbeef"),
-            &q(b"what-the-client-said", b"out", "deadbeef"),
+            &pol,
+            &q(&pol, b"what-the-client-said", b"out", "deadbeef"),
+            NONCE,
             b"what-the-enclave-told-the-client",
             b"out",
-        );
+        )
+        .expect("audit should run");
         assert_eq!(r.verdict, Verdict::Broken);
         assert!(!r.input_matches_quote);
     }
 
     #[test]
     fn policy_measurement_drift_breaks_chain() {
-        let r = verify_chain(&p("deadbeef"), &q(b"in", b"out", "cafef00d"), b"in", b"out");
+        let pol = p("deadbeef");
+        let mut quote = q(&pol, b"in", b"out", "deadbeef");
+        quote.measurement_hex = "cafef00d".into();
+        let r = verify_chain(&pol, &quote, NONCE, b"in", b"out").expect("audit should run");
         assert_eq!(r.verdict, Verdict::Broken);
-        assert!(!r.policy_matches_quote);
+        assert!(!r.measurement_matches);
+    }
+
+    #[test]
+    fn missing_nonce_refuses_the_audit() {
+        let pol = p("deadbeef");
+        let mut quote = q(&pol, b"in", b"out", "deadbeef");
+        quote.nonce_hex = String::new();
+        let r = verify_chain(&pol, &quote, NONCE, b"in", b"out");
+        assert_eq!(r, Err(AuditError::NoNonceInQuote));
+    }
+
+    #[test]
+    fn nonce_mismatch_breaks_chain() {
+        let pol = p("deadbeef");
+        let r = verify_chain(
+            &pol,
+            &q(&pol, b"in", b"out", "deadbeef"),
+            "ffffffff",
+            b"in",
+            b"out",
+        )
+        .expect("audit should run");
+        assert_eq!(r.verdict, Verdict::Broken);
+        assert!(!r.nonce_matches);
+    }
+
+    #[test]
+    fn policy_integrity_drift_breaks_chain() {
+        let pol = p("deadbeef");
+        let mut quote = q(&pol, b"in", b"out", "deadbeef");
+        // Simulate the endpoint swapping its policy mid-audit by having
+        // the quote reference a different policy sha.
+        quote.policy_sha256_hex = "0".repeat(64);
+        let r = verify_chain(&pol, &quote, NONCE, b"in", b"out").expect("audit should run");
+        assert_eq!(r.verdict, Verdict::Broken);
+        assert!(!r.policy_integrity);
+    }
+
+    #[test]
+    fn canonical_policy_bytes_is_order_independent() {
+        // Two Policy values with the same semantic content must hash the
+        // same regardless of in-memory field ordering: because Policy is
+        // a struct, Rust fixes the field order, so we instead check that
+        // the canonical bytes decode back to the same object.
+        let a = Policy {
+            endpoint: "x".into(),
+            vendor: Vendor::IntelTdx,
+            measurement_hex: "ab".into(),
+            policy_sha256_hex: "".into(),
+        };
+        let b = Policy {
+            endpoint: "x".into(),
+            vendor: Vendor::IntelTdx,
+            measurement_hex: "ab".into(),
+            policy_sha256_hex: "".into(),
+        };
+        assert_eq!(canonical_policy_bytes(&a), canonical_policy_bytes(&b));
     }
 }

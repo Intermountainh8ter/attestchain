@@ -23,12 +23,20 @@ attestchain is that tool.
 
 ## What is in this scaffold
 
-- Core types: `Policy`, `Quote`, `ChainReport`, `Verdict`.
-- `verify_chain(policy, quote, input_bytes, output_bytes)` — the audit-level
-  check: measurement match, input-sha match, output-sha match. The
-  vendor-specific cert-chain verifier is a follow-up and the verdict is
-  `PendingCertChain` until it lands.
-- `attestchain verify <policy.json> <quote.json> <input> <output>` CLI.
+- Core types: `Policy`, `Quote`, `ChainReport`, `Verdict`, `AuditError`.
+- `canonical_policy_bytes(policy)` — JSON-sorted canonical serialization
+  excluding the self-referential `policy_sha256_hex` field, so a policy
+  can carry its own content hash and the audit can recompute it.
+- `verify_chain(policy, quote, client_nonce_hex, input_bytes, output_bytes)` —
+  checks 1-4 of the pre-registered chain plus the nonce-replay guard:
+  policy integrity, measurement match, nonce match, input-sha match,
+  output-sha match. The vendor-specific cert-chain verifier (check 5)
+  is a follow-up and the verdict is `PendingCertChain` until it lands.
+  A quote with an empty nonce causes the audit to refuse (returns
+  `Err(AuditError::NoNonceInQuote)`), per the pre-reg's
+  replay-indistinguishability rule.
+- `attestchain verify <policy.json> <quote.json> <input> <output> --nonce <hex>`
+  CLI. Refusal exits 2.
 - `docs/PREREGISTRATION.md` with the chain check locked.
 
 Not in this commit (openly tracked):
@@ -43,7 +51,7 @@ Not in this commit (openly tracked):
 
 ```sh
 cargo install --path .
-attestchain verify policy.json quote.json input.bin output.bin
+attestchain verify policy.json quote.json input.bin output.bin --nonce <hex>
 ```
 
 ## License
