@@ -6,7 +6,10 @@
 //! a running TEE-attested endpoint is TODO; the pre-registration locks
 //! the chain check before any live verification ships.
 
-use attestchain::{leaderboard_row, verify_chain, ChainReport, Policy, Quote, Vendor};
+use attestchain::{
+    http::{fetch_attested, ProviderProfile},
+    leaderboard_row, verify_chain, ChainReport, Policy, Quote, Vendor,
+};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -47,6 +50,26 @@ enum Cmd {
         /// `intel-tdx` or `amd-sev-snp`.
         #[arg(long)]
         vendor: String,
+    },
+    /// Fetch a policy + quote from a live TEE-attested endpoint using a
+    /// provider profile, verify the chain, write the ChainReport to disk,
+    /// and exit 0 (Attested or PendingCertChain) / 1 (Broken).
+    Audit {
+        /// Provider profile JSON.
+        #[arg(long)]
+        profile: std::path::PathBuf,
+        /// File holding the prompt bytes.
+        #[arg(long)]
+        prompt: std::path::PathBuf,
+        /// Hex-encoded client-chosen nonce the client expects the enclave
+        /// to bind. Required: the audit refuses to run without one.
+        #[arg(long)]
+        nonce: String,
+        /// Destination directory for the audited bundle:
+        /// `policy.json`, `quote.json`, `input.bin`, `output.bin`,
+        /// `chain_report.json`.
+        #[arg(long)]
+        out: std::path::PathBuf,
     },
     /// Print the version banner and exit.
     Version,
@@ -108,6 +131,42 @@ fn main() -> anyhow::Result<()> {
             let eligible = row.leaderboard_eligible;
             println!("{}", serde_json::to_string_pretty(&row)?);
             if !eligible {
+                std::process::exit(1);
+            }
+        }
+        Cmd::Audit {
+            profile,
+            prompt,
+            nonce,
+            out,
+        } => {
+            let profile: ProviderProfile = load_json(&profile)?;
+            let prompt_bytes = std::fs::read(&prompt)?;
+            let fetched = fetch_attested(&profile, &prompt_bytes, &nonce)?;
+            let report = verify_chain(
+                &fetched.policy,
+                &fetched.quote,
+                &nonce,
+                &prompt_bytes,
+                &fetched.output_bytes,
+            )?;
+            std::fs::create_dir_all(&out)?;
+            std::fs::write(
+                out.join("policy.json"),
+                serde_json::to_string_pretty(&fetched.policy)?,
+            )?;
+            std::fs::write(
+                out.join("quote.json"),
+                serde_json::to_string_pretty(&fetched.quote)?,
+            )?;
+            std::fs::write(out.join("input.bin"), &prompt_bytes)?;
+            std::fs::write(out.join("output.bin"), &fetched.output_bytes)?;
+            std::fs::write(
+                out.join("chain_report.json"),
+                serde_json::to_string_pretty(&report)?,
+            )?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+            if report.verdict == attestchain::Verdict::Broken {
                 std::process::exit(1);
             }
         }
