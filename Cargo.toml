@@ -1,6 +1,7 @@
 [package]
 name = "attestchain"
-version = "0.0.1"
+version = "0.1.0"
+authors = ["Intermountainh8ter"]
 edition = "2021"
 license = "MIT"
 description = "End-to-end chain-of-custody auditor for TEE-attested LLM inference endpoints (Intel TDX, AMD SEV-SNP)."
