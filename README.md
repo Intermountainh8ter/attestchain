@@ -54,6 +54,19 @@ cargo install --path .
 attestchain verify policy.json quote.json input.bin output.bin --nonce <hex>
 ```
 
+## Tamper benchmark (synthetic, model-free)
+
+`attestchain tamperbench --seed 7 --chains 200 --len 16 --out results/592-tamper-checkpoint.json`
+builds seeded synthetic SHA-256-linked record chains (no vendor data) and
+applies four tampers. Results in `results/592-tamper-checkpoint.json`:
+suffix truncation of 1 to 4 records is detected at rate 0.0
+(`/tamper/suffix_truncation_detection_rate_link_only`) by link verification
+alone and 1.0 (`/tamper/suffix_truncation_detection_rate_with_checkpoint`) once an
+external (length, head-hash) checkpoint is compared. Bit flips, reorders and
+injected-clock expiry are detected at rate 1.0 in both modes, and untampered
+chains are never rejected. Limit: the chains are synthetic, so this shows a
+property of the construction, not of any provider.
+
 ## License
 
 MIT. See `LICENSE`.

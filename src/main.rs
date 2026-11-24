@@ -71,6 +71,17 @@ enum Cmd {
         #[arg(long)]
         out: std::path::PathBuf,
     },
+    /// Model-free tamper benchmark over seeded synthetic record chains.
+    Tamperbench {
+        #[arg(long)]
+        seed: u64,
+        #[arg(long)]
+        chains: usize,
+        #[arg(long)]
+        len: usize,
+        #[arg(long)]
+        out: std::path::PathBuf,
+    },
     /// Print the version banner and exit.
     Version,
 }
@@ -169,6 +180,39 @@ fn main() -> anyhow::Result<()> {
             if report.verdict == attestchain::Verdict::Broken {
                 std::process::exit(1);
             }
+        }
+        Cmd::Tamperbench { seed, chains, len, out } => {
+            let started = std::time::SystemTime::now();
+            let t0 = std::time::Instant::now();
+            let rep = attestchain::tamper::run(seed, chains, len);
+            let mut v = serde_json::to_value(&rep)?;
+            let ts = started.duration_since(std::time::UNIX_EPOCH)?.as_secs();
+            let (days, rem) = (ts / 86400, ts % 86400);
+            // civil-from-days
+            let z = days as i64 + 719468;
+            let era = z / 146097;
+            let doe = z - era * 146097;
+            let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+            let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+            let mp = (5 * doy + 2) / 153;
+            let d = doy - (153 * mp + 2) / 5 + 1;
+            let m = if mp < 10 { mp + 3 } else { mp - 9 };
+            let y = yoe + era * 400 + if m <= 2 { 1 } else { 0 };
+            let started_at = format!(
+                "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+                y, m, d, rem / 3600, rem % 3600 / 60, rem % 60
+            );
+            v["provenance"] = serde_json::json!({
+                "started_at": started_at,
+                "seeds": [seed],
+                "command": format!("cargo run --locked -q --release -- tamperbench --seed {seed} --chains {chains} --len {len} --out results/592-tamper-checkpoint.json"),
+                "hardware": format!("{} {} (cpu only)", std::env::consts::OS, std::env::consts::ARCH),
+                "wall_s": t0.elapsed().as_secs_f64(),
+                "data_sources": [{"url": "synthetic: generated in-crate from a seeded PRNG, no external data", "license": "MIT (this repository)"}],
+            });
+            if let Some(dir) = out.parent() { std::fs::create_dir_all(dir)?; }
+            std::fs::write(&out, serde_json::to_string_pretty(&v)?)?;
+            println!("{}", serde_json::to_string_pretty(&v["tamper"])?);
         }
         Cmd::Version => println!("attestchain {}", env!("CARGO_PKG_VERSION")),
     }

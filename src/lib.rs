@@ -12,6 +12,7 @@
 //! `docs/PREREGISTRATION.md` for the full plan.
 
 pub mod http;
+pub mod tamper;
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};

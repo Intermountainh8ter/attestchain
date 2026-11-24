@@ -1,0 +1,46 @@
+{
+  "chains": 200,
+  "len": 16,
+  "provenance": {
+    "command": "cargo run --locked -q --release -- tamperbench --seed 7 --chains 200 --len 16 --out results/592-tamper-checkpoint.json",
+    "data_sources": [
+      {
+        "license": "MIT (this repository)",
+        "url": "synthetic: generated in-crate from a seeded PRNG, no external data"
+      }
+    ],
+    "hardware": "linux x86_64 (cpu only)",
+    "seeds": [
+      7
+    ],
+    "started_at": "2026-11-24T12:49:49Z",
+    "wall_s": 0.03589611
+  },
+  "seed": 7,
+  "tamper": {
+    "bit_flip": {
+      "detection_rate_link_only": 1.0,
+      "detection_rate_with_checkpoint": 1.0,
+      "trials": 200
+    },
+    "expired_collateral": {
+      "detection_rate_link_only": 1.0,
+      "detection_rate_with_checkpoint": 1.0,
+      "trials": 200
+    },
+    "reorder": {
+      "detection_rate_link_only": 1.0,
+      "detection_rate_with_checkpoint": 1.0,
+      "trials": 200
+    },
+    "suffix_truncation": {
+      "detection_rate_link_only": 0.0,
+      "detection_rate_with_checkpoint": 1.0,
+      "trials": 200
+    },
+    "suffix_truncation_detection_rate_link_only": 0.0,
+    "suffix_truncation_detection_rate_with_checkpoint": 1.0,
+    "untampered_false_positive_rate_link_only": 0.0,
+    "untampered_false_positive_rate_with_checkpoint": 0.0
+  }
+}
