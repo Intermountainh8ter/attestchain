@@ -1,0 +1,45 @@
+{
+  "chain_mutation": {
+    "full_false_reject_rate": 0.0,
+    "leaf_only_false_reject_rate": 0.0,
+    "leaf_only_missing_intermediate_detection_rate": 0.0,
+    "missing_intermediate": {
+      "full_detection_rate": 1.0,
+      "leaf_only_detection_rate": 0.0,
+      "trials": 200
+    },
+    "missing_intermediate_detection_rate": 1.0,
+    "repeated_root": {
+      "full_detection_rate": 1.0,
+      "leaf_only_detection_rate": 0.0,
+      "trials": 200
+    },
+    "self_signed_leaf": {
+      "full_detection_rate": 1.0,
+      "leaf_only_detection_rate": 0.0,
+      "trials": 200
+    },
+    "swap_order": {
+      "full_detection_rate": 1.0,
+      "leaf_only_detection_rate": 0.0,
+      "trials": 200
+    }
+  },
+  "chains": 200,
+  "provenance": {
+    "command": "cargo run --locked -q --release -- chainbench --seed 7 --chains 200 --out results/595-chain-mutation.json",
+    "data_sources": [
+      {
+        "license": "MIT (this repository)",
+        "url": "synthetic: generated in-crate from a seeded PRNG, no external data"
+      }
+    ],
+    "hardware": "linux x86_64 (cpu only)",
+    "seeds": [
+      7
+    ],
+    "started_at": "2026-11-24T12:57:55Z",
+    "wall_s": 0.006986839
+  },
+  "seed": 7
+}

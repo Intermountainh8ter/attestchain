@@ -67,6 +67,19 @@ injected-clock expiry are detected at rate 1.0 in both modes, and untampered
 chains are never rejected. Limit: the chains are synthetic, so this shows a
 property of the construction, not of any provider.
 
+## Chain mutation benchmark (synthetic, model-free)
+
+`attestchain chainbench --seed 7 --chains 200 --out results/595-chain-mutation.json`
+builds seeded synthetic three-link certificate-chain records (root,
+intermediate, leaf; not X.509, hash tags instead of signatures) and applies
+four mutations. A full verifier (issuer links, pinned root) detects missing
+intermediate at rate 1.0 (`/chain_mutation/missing_intermediate_detection_rate`),
+and also swap order, repeated root and self-signed leaf, with a false-reject
+rate of 0.0 (`/chain_mutation/full_false_reject_rate`). A leaf-only verifier
+detects missing intermediate at rate 0.0
+(`/chain_mutation/leaf_only_missing_intermediate_detection_rate`). Limit: this
+tests chain-walking logic on synthetic records, not real DCAP or SEV-SNP chains.
+
 ## License
 
 MIT. See `LICENSE`.
