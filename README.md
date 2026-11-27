@@ -93,3 +93,15 @@ Replaying a hash-linked chain to the head grows by a mean factor of 1.979 per do
 (`/sweep/chain_inclusion_cost_ratio_mean`), with a per-doubling minimum of 1.677
 (`/sweep/chain_inclusion_cost_ratio_min`), below the 1.8 bound. Chain append costs 1 hash
 per record. Limit: hash counts only, synthetic records, no writer axis.
+
+## Tamper class benchmark (synthetic, model-free)
+
+`attestchain classbench --seed 7 --chains 200 --len 16 --out results/721-tamperclass.json`
+applies eight named tamper classes to seeded synthetic SHA-256 hash chains. A link-only
+verifier detects 6 of 8 classes at rate 1.0 (`/detection/chain_only_classes_detected`); it
+misses tail truncation and prefix rewrite with recomputed downstream hashes at rate 0.0.
+Adding an external (length, head-hash) checkpoint detects 8 of 8
+(`/detection/checkpoint_classes_detected`), the always-accept baseline detects 0
+(`/detection/always_accept_classes_detected`), and no untampered chain is rejected
+(`/detection/untampered_false_positive_rate_chain_only`). Limit: synthetic chains and
+hand-written tamper classes, so this shows a property of the construction, not of any provider.

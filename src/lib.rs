@@ -12,6 +12,7 @@
 //! `docs/PREREGISTRATION.md` for the full plan.
 
 pub mod chainbench;
+pub mod classbench;
 pub mod http;
 pub mod logcost;
 pub mod tamper;

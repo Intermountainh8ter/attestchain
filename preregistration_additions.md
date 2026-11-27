@@ -50,3 +50,19 @@ Falsifier: Merkle increment outside 0.99 to 1.01, chain ratio below 1.8, or chai
 cost differing from 1 hash per record.
 
 Command: `cargo run --locked -q --release -- logcost --seed 7 --out results/631-logcost-compact.json`
+
+## 2026-11-27T22:05:39Z tamperclass proposal:492af635adaedfe7ecf81f806e92d470b3d9cc08aa73d0d6e7d925aaa057c5d7
+
+Hypothesis: on 200 seeded synthetic hash chains of length 16, a link-only verifier detects
+exactly 6 of 8 tamper classes at rate 1.0 (tail truncation and prefix rewrite with recomputed
+downstream hashes are missed at rate 0.0), a verifier that also compares an external
+(length, head-hash) checkpoint detects all 8 at rate 1.0, the always-accept baseline detects 0,
+and no untampered chain is rejected.
+
+Pre-registered metric: `/detection/chain_only_classes_detected`.
+Expected: chain-only verifier detects exactly 6 classes; checkpoint verifier detects 8.
+
+Falsifier: chain_only_classes_detected differs from 6, checkpoint classes detected below 8, or
+any untampered chain rejected.
+
+Command: `cargo run --locked -q --release -- classbench --seed 7 --chains 200 --len 16 --out results/721-tamperclass.json`

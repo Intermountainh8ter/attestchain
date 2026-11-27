@@ -24,7 +24,7 @@ pub struct Checkpoint {
 
 const GENESIS: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
-fn record_hash(seq: u64, prev: &str, payload: &str, not_after: u64) -> String {
+pub fn record_hash(seq: u64, prev: &str, payload: &str, not_after: u64) -> String {
     sha256_hex(format!("{seq}|{prev}|{payload}|{not_after}").as_bytes())
 }
 

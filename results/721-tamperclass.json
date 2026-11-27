@@ -1,0 +1,85 @@
+{
+  "chains": 200,
+  "detection": {
+    "always_accept_classes_detected": 0,
+    "chain_only_classes_detected": 6,
+    "checkpoint_classes_detected": 8,
+    "classes": [
+      {
+        "always_accept": 0.0,
+        "chain_only": 1.0,
+        "class": "bit_flip",
+        "trials": 200,
+        "with_checkpoint": 1.0
+      },
+      {
+        "always_accept": 0.0,
+        "chain_only": 1.0,
+        "class": "reorder",
+        "trials": 200,
+        "with_checkpoint": 1.0
+      },
+      {
+        "always_accept": 0.0,
+        "chain_only": 0.0,
+        "class": "tail_truncation",
+        "trials": 200,
+        "with_checkpoint": 1.0
+      },
+      {
+        "always_accept": 0.0,
+        "chain_only": 0.0,
+        "class": "prefix_rewrite_rehashed",
+        "trials": 200,
+        "with_checkpoint": 1.0
+      },
+      {
+        "always_accept": 0.0,
+        "chain_only": 1.0,
+        "class": "mid_deletion",
+        "trials": 200,
+        "with_checkpoint": 1.0
+      },
+      {
+        "always_accept": 0.0,
+        "chain_only": 1.0,
+        "class": "duplicate_record",
+        "trials": 200,
+        "with_checkpoint": 1.0
+      },
+      {
+        "always_accept": 0.0,
+        "chain_only": 1.0,
+        "class": "prev_link_splice",
+        "trials": 200,
+        "with_checkpoint": 1.0
+      },
+      {
+        "always_accept": 0.0,
+        "chain_only": 1.0,
+        "class": "expired_collateral",
+        "trials": 200,
+        "with_checkpoint": 1.0
+      }
+    ],
+    "untampered_false_positive_rate_chain_only": 0.0,
+    "untampered_false_positive_rate_with_checkpoint": 0.0
+  },
+  "len": 16,
+  "provenance": {
+    "command": "cargo run --locked -q --release -- classbench --seed 7 --chains 200 --len 16 --out results/721-tamperclass.json",
+    "data_sources": [
+      {
+        "license": "MIT",
+        "url": "synthetic: seeded generator, no external data"
+      }
+    ],
+    "hardware": "linux x86_64 (cpu only)",
+    "seeds": [
+      7
+    ],
+    "started_at": "2026-11-27T22:05:58Z",
+    "wall_s": 0.06496851
+  },
+  "seed": 7
+}
