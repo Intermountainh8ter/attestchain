@@ -11,6 +11,7 @@
 //! feature flags and arrive in follow-up releases; see
 //! `docs/PREREGISTRATION.md` for the full plan.
 
+pub mod canonbench;
 pub mod chainbench;
 pub mod classbench;
 pub mod http;

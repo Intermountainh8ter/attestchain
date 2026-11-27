@@ -1,0 +1,34 @@
+{
+  "chains": 200,
+  "false_tamper_rate_by_variation": {
+    "canonical_key_order": 0.0,
+    "canonical_number_format": 0.0,
+    "canonical_unicode_escape": 0.0,
+    "canonical_unvaried_control": 0.0,
+    "canonical_whitespace": 0.0,
+    "naive_key_order": 1.0,
+    "naive_number_format": 1.0,
+    "naive_unicode_escape": 1.0,
+    "naive_unvaried_control": 0.0,
+    "naive_whitespace": 1.0
+  },
+  "len": 16,
+  "provenance": {
+    "command": "cargo run --locked -q --release -- canonbench --seed 7 --chains 200 --len 16 --out results/723-canonbench.json",
+    "data_sources": [
+      {
+        "license": "MIT (generated, no external data)",
+        "url": "synthetic:seeded"
+      }
+    ],
+    "hardware": "linux x86_64 (cpu only)",
+    "seeds": [
+      7
+    ],
+    "started_at": "2026-11-27T22:12:24Z",
+    "wall_s": 0.054624331
+  },
+  "real_flip_detection_rate_canonical": 1.0,
+  "real_flip_detection_rate_naive": 1.0,
+  "seed": 7
+}

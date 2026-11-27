@@ -66,3 +66,21 @@ Falsifier: chain_only_classes_detected differs from 6, checkpoint classes detect
 any untampered chain rejected.
 
 Command: `cargo run --locked -q --release -- classbench --seed 7 --chains 200 --len 16 --out results/721-tamperclass.json`
+
+## 2026-11-27T22:12:12Z canonbench proposal:322aed5ace1ba3837d5b82648fa76ee1a660d03021c48853e87cb4faa4db66ea
+
+Hypothesis: on 200 seeded synthetic chains of length 16 whose JSON records are semantically
+unchanged but re-serialised (key order, whitespace, unicode escapes, number formatting), a
+verifier that hashes the received bytes reports a false tamper on every chain for each of the
+four variations (rate 1.0), a verifier that canonicalises (sorted keys, minimal whitespace,
+normalised numbers and escapes) before hashing reports 0.0, and the canonicalising verifier
+still detects a real one-bit content flip at rate 1.0.
+
+Pre-registered metric: `/false_tamper_rate_by_variation/naive_key_order`.
+Expected: 1.0 for the naive verifier under key reordering; canonicalising verifier 0.0 on all
+four variations.
+
+Falsifier: naive rate below 1.0 for any variation, canonicalising false-tamper rate above 0.0,
+or real content flip detected below rate 1.0.
+
+Command: `cargo run --locked -q --release -- canonbench --seed 7 --chains 200 --len 16 --out results/723-canonbench.json`

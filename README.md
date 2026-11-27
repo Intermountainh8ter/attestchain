@@ -105,3 +105,14 @@ Adding an external (length, head-hash) checkpoint detects 8 of 8
 (`/detection/always_accept_classes_detected`), and no untampered chain is rejected
 (`/detection/untampered_false_positive_rate_chain_only`). Limit: synthetic chains and
 hand-written tamper classes, so this shows a property of the construction, not of any provider.
+
+## Canonicalisation false-tamper benchmark (synthetic, model-free)
+
+`attestchain canonbench --seed 7 --chains 200 --len 16 --out results/723-canonbench.json`
+re-serialises seeded hash-chained JSON records without changing their content. A verifier that
+hashes the received bytes reports a false tamper on every chain under key reordering
+(`/false_tamper_rate_by_variation/naive_key_order`), whitespace, unicode escapes and number
+formatting; a verifier that canonicalises first reports 0.0
+(`/false_tamper_rate_by_variation/canonical_key_order`) and still detects a real content change
+at rate 1.0 (`/real_flip_detection_rate_canonical`). Limit: the canonical form is a minimal
+subset of RFC 8785, not a full implementation, and the records are synthetic.
