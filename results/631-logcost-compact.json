@@ -1,0 +1,75 @@
+{
+  "provenance": {
+    "command": "cargo run --locked -q --release -- logcost --seed 7 --out results/631-logcost-compact.json",
+    "data_sources": [
+      {
+        "license": "MIT (own code)",
+        "url": "synthetic: seeded splitmix64 records, no external data"
+      }
+    ],
+    "hardware": "linux x86_64 (cpu only)",
+    "seeds": [
+      7
+    ],
+    "started_at": "2026-11-27T06:09:58Z",
+    "wall_s": 0.133705547
+  },
+  "sweep": {
+    "all_proofs_valid": true,
+    "chain_append_one_hash_per_record": true,
+    "chain_inclusion_cost_ratio_mean": 1.9790788139114373,
+    "chain_inclusion_cost_ratio_min": 1.6766956873861107,
+    "chain_inclusion_cost_ratio_per_doubling": [
+      1.900745840504877,
+      1.899185028674917,
+      1.7596948506039414,
+      2.501806358381503,
+      1.7830324909747293,
+      1.6766956873861107,
+      2.3323914408539825
+    ],
+    "merkle_inclusion_hashes_per_doubling": 1.0,
+    "rows": [
+      {
+        "chain_inclusion_hashes_mean": 34.86,
+        "len": 64,
+        "merkle_inclusion_hashes_mean": 7.0
+      },
+      {
+        "chain_inclusion_hashes_mean": 66.26,
+        "len": 128,
+        "merkle_inclusion_hashes_mean": 8.0
+      },
+      {
+        "chain_inclusion_hashes_mean": 125.84,
+        "len": 256,
+        "merkle_inclusion_hashes_mean": 9.0
+      },
+      {
+        "chain_inclusion_hashes_mean": 221.44,
+        "len": 512,
+        "merkle_inclusion_hashes_mean": 10.0
+      },
+      {
+        "chain_inclusion_hashes_mean": 554.0,
+        "len": 1024,
+        "merkle_inclusion_hashes_mean": 11.0
+      },
+      {
+        "chain_inclusion_hashes_mean": 987.8,
+        "len": 2048,
+        "merkle_inclusion_hashes_mean": 12.0
+      },
+      {
+        "chain_inclusion_hashes_mean": 1656.24,
+        "len": 4096,
+        "merkle_inclusion_hashes_mean": 13.0
+      },
+      {
+        "chain_inclusion_hashes_mean": 3863.0,
+        "len": 8192,
+        "merkle_inclusion_hashes_mean": 14.0
+      }
+    ]
+  }
+}

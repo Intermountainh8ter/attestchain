@@ -83,3 +83,13 @@ tests chain-walking logic on synthetic records, not real DCAP or SEV-SNP chains.
 ## License
 
 MIT. See `LICENSE`.
+
+## Log cost (synthetic, model-free)
+
+`attestchain logcost --seed 7 --out results/631-logcost-compact.json` counts SHA-256
+calls for single-record inclusion checks over logs of 64 to 8192 records. Merkle
+inclusion grows by 1.0 hash per doubling (`/sweep/merkle_inclusion_hashes_per_doubling`).
+Replaying a hash-linked chain to the head grows by a mean factor of 1.979 per doubling
+(`/sweep/chain_inclusion_cost_ratio_mean`), with a per-doubling minimum of 1.677
+(`/sweep/chain_inclusion_cost_ratio_min`), below the 1.8 bound. Chain append costs 1 hash
+per record. Limit: hash counts only, synthetic records, no writer axis.

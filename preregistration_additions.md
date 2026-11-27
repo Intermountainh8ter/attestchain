@@ -33,3 +33,20 @@ Falsifier: any mutation where the full verifier's detection rate is below 1.0, o
 untampered chain rejected (false-reject rate above 0.0).
 
 Command: `cargo run --locked -q --release -- chainbench --seed 7 --chains 200 --out results/595-chain-mutation.json`
+
+## 2026-11-27T06:09:40Z logcost-compact proposal:d6d6ec315bdf1dd9237fa995daa6b14a26d55ac9e2e606976905a2b5cdd55b7c
+
+Hypothesis: on seeded synthetic logs of 64, 128, ..., 8192 records, counting SHA-256
+invocations (not wall time) and averaging over 50 seeded random record positions per
+length, Merkle inclusion verification against a checkpoint costs exactly 1 more hash per
+doubling of log length (mean increment within 0.01 of 1.0), while verifying a random
+record's inclusion in a hash-linked chain against the head checkpoint costs a factor of at
+least 1.8 more hashes per doubling; chain append costs exactly 1 hash per record.
+
+Pre-registered metric: `/sweep/merkle_inclusion_hashes_per_doubling`.
+Expected: equals 1.0 (within 0.01); mean chain inclusion cost ratio per doubling at least 1.8.
+
+Falsifier: Merkle increment outside 0.99 to 1.01, chain ratio below 1.8, or chain append
+cost differing from 1 hash per record.
+
+Command: `cargo run --locked -q --release -- logcost --seed 7 --out results/631-logcost-compact.json`

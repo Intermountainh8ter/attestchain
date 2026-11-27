@@ -92,6 +92,13 @@ enum Cmd {
         out: std::path::PathBuf,
     },
     /// Print the version banner and exit.
+    /// Hash-count cost of Merkle vs hash-linked-chain inclusion (synthetic).
+    Logcost {
+        #[arg(long, default_value_t = 7)]
+        seed: u64,
+        #[arg(long)]
+        out: std::path::PathBuf,
+    },
     Version,
 }
 
@@ -254,6 +261,33 @@ fn main() -> anyhow::Result<()> {
             if let Some(dir) = out.parent() { std::fs::create_dir_all(dir)?; }
             std::fs::write(&out, serde_json::to_string_pretty(&v)?)?;
             println!("{}", serde_json::to_string_pretty(&v["chain_mutation"])?);
+        }
+        Cmd::Logcost { seed, out } => {
+            let started = std::time::SystemTime::now();
+            let t0 = std::time::Instant::now();
+            let mut v = attestchain::logcost::run(seed);
+            let ts = started.duration_since(std::time::UNIX_EPOCH)?.as_secs();
+            let (days, rem) = (ts / 86400, ts % 86400);
+            let z = days as i64 + 719468;
+            let era = z / 146097;
+            let doe = z - era * 146097;
+            let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+            let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+            let mp = (5 * doy + 2) / 153;
+            let d = doy - (153 * mp + 2) / 5 + 1;
+            let m = if mp < 10 { mp + 3 } else { mp - 9 };
+            let y = yoe + era * 400 + if m <= 2 { 1 } else { 0 };
+            v["provenance"] = serde_json::json!({
+                "started_at": format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z", y, m, d, rem / 3600, rem % 3600 / 60, rem % 60),
+                "seeds": [seed],
+                "command": format!("cargo run --locked -q --release -- logcost --seed {seed} --out results/631-logcost-compact.json"),
+                "hardware": format!("{} {} (cpu only)", std::env::consts::OS, std::env::consts::ARCH),
+                "wall_s": t0.elapsed().as_secs_f64(),
+                "data_sources": [{"url": "synthetic: seeded splitmix64 records, no external data", "license": "MIT (own code)"}],
+            });
+            if let Some(dir) = out.parent() { std::fs::create_dir_all(dir)?; }
+            std::fs::write(&out, serde_json::to_string_pretty(&v)?)?;
+            println!("{}", serde_json::to_string_pretty(&v["sweep"])?);
         }
         Cmd::Version => println!("attestchain {}", env!("CARGO_PKG_VERSION")),
     }

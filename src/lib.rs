@@ -13,6 +13,7 @@
 
 pub mod chainbench;
 pub mod http;
+pub mod logcost;
 pub mod tamper;
 
 use serde::{Deserialize, Serialize};
