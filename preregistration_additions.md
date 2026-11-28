@@ -84,3 +84,28 @@ Falsifier: naive rate below 1.0 for any variation, canonicalising false-tamper r
 or real content flip detected below rate 1.0.
 
 Command: `cargo run --locked -q --release -- canonbench --seed 7 --chains 200 --len 16 --out results/723-canonbench.json`
+
+## 2026-11-28T00:40:00Z truncsweep proposal:d3bff0eb74efd970cbbc5d7cc5617da290d415bab2ebc54dd68855812e4dee5f
+
+Hypothesis: with logs of 64 records, uniformly random truncation to 1..63 records, and a
+checkpoint every 8 records, the measured undetected-truncation share equals the analytic share
+(cuts landing at or after the last checkpoint length) to within 0.02 absolute, is above 0 for
+every period greater than 1, and is exactly 0.0 at period 1.
+
+Model fixed before running: checkpoints are (length, head-hash) pairs taken at lengths
+period, 2*period, ... strictly below the log length (the newest tail has no checkpoint yet);
+the verifier compares the truncated log with the latest one. A cut to length L is undetected
+iff L >= last checkpoint length. At period 8 the last checkpoint is at 56, so 8 of 63 cut
+lengths (56..63) are undetected, 0.127; the proposal text said 7 of 63 and that is
+the point of tension: the analytic share computed in code is the reference. At period 1 the
+last checkpoint is at 63, so one cut length (63) is undetected, and the "exactly 0.0 at
+period 1" clause is expected to fail under this model.
+
+Pre-registered metric: `/truncation_sweep/undetected_share_by_period/8`.
+Expected: about 0.11 to 0.13 (expected_range 0.09 to 0.13).
+
+Falsifier: measured share at period 8 differs from the analytic share by more than 0.02, or any
+truncation shorter than the last checkpoint length goes undetected, or period 1 yields a nonzero
+share.
+
+Command: `cargo run --locked -q --release -- truncsweep --seed 7 --chains 2000 --len 64 --out results/756-truncsweep.json`

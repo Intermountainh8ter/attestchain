@@ -17,6 +17,7 @@ pub mod classbench;
 pub mod http;
 pub mod logcost;
 pub mod tamper;
+pub mod truncsweep;
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};

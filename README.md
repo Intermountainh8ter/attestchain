@@ -116,3 +116,15 @@ formatting; a verifier that canonicalises first reports 0.0
 (`/false_tamper_rate_by_variation/canonical_key_order`) and still detects a real content change
 at rate 1.0 (`/real_flip_detection_rate_canonical`). Limit: the canonical form is a minimal
 subset of RFC 8785, not a full implementation, and the records are synthetic.
+
+## Truncation sweep (synthetic, model-free)
+
+`attestchain truncsweep --seed 7 --chains 2000 --len 64 --out results/756-truncsweep.json`
+cuts seeded 64-record logs to a random length in 1..63 and checks the cut against the latest
+checkpoint, taken every `period` records below the log length. At period 8 the measured
+undetected share is 0.1305 (`/truncation_sweep/undetected_share_by_period/8`), against an
+analytic 0.12698412698412698 (`/truncation_sweep/analytic_share_by_period/8`). At period 1 it is
+0.0175 (`/truncation_sweep/undetected_share_by_period/1`), not 0.0: the cut to the checkpoint
+length itself is undetectable. No cut shorter than the last checkpoint went undetected
+(`/truncation_sweep/undetected_before_last_checkpoint_count_by_period/8`). Limit: synthetic logs,
+a single in-memory checkpoint.
