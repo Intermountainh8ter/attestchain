@@ -128,3 +128,13 @@ analytic 0.12698412698412698 (`/truncation_sweep/analytic_share_by_period/8`). A
 length itself is undetectable. No cut shorter than the last checkpoint went undetected
 (`/truncation_sweep/undetected_before_last_checkpoint_count_by_period/8`). Limit: synthetic logs,
 a single in-memory checkpoint.
+
+## Checkpoint outage sweep (synthetic, model-free)
+
+`attestchain outagesweep --seed 7 --chains 2000 --len 64 --period 8 --out results/760-outagesweep.json`
+drops each checkpoint publication independently with probability q and cuts the log uniformly at random.
+At q=0.5 the undetected-truncation share is 0.248 (`/outage_sweep/undetected_share_by_miss_rate/0.5`)
+against an analytic 0.25285218253968256 (`/outage_sweep/analytic_share_by_miss_rate/0.5`); with no outage it is 0.1305
+(`/outage_sweep/undetected_share_by_miss_rate/0`). The median undetected suffix is 8 records at q=0.5
+(`/outage_sweep/median_undetected_suffix_len_by_miss_rate/0.5`). No cut shorter than the last published checkpoint
+went undetected. Limit: synthetic logs, independent misses; real outages are bursty.

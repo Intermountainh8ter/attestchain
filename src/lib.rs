@@ -16,6 +16,7 @@ pub mod chainbench;
 pub mod classbench;
 pub mod http;
 pub mod logcost;
+pub mod outagesweep;
 pub mod tamper;
 pub mod truncsweep;
 

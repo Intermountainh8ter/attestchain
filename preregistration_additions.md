@@ -109,3 +109,23 @@ truncation shorter than the last checkpoint length goes undetected, or period 1 
 share.
 
 Command: `cargo run --locked -q --release -- truncsweep --seed 7 --chains 2000 --len 64 --out results/756-truncsweep.json`
+
+## 2026-11-28T00:57:31Z outagesweep proposal:444e697844f6ab0180b6fb7780bb6cafaaa41784d004dff5e410712524f6309e
+
+Hypothesis: with logs of 64 records, checkpoint period 8, each checkpoint publication independently
+missed with probability q, and uniformly random truncation to 1..63 records, the undetected-truncation
+share at q=0.5 is within 0.03 absolute of the analytic share computed in code, is strictly increasing
+across q in 0, 0.1, 0.25, 0.5, 0.75, and exceeds the no-outage share (8/63, about 0.127) at every q > 0.
+
+Model fixed before running: checkpoints exist at lengths 8, 16, ..., 56; each is published with
+probability 1-q; a cut to length L is undetected iff no published checkpoint has length greater than L.
+Analytic share = mean over L=1..63 of q^m(L), m(L) = number of checkpoints with length > L. The
+analytic value at q=0.5 is computed in code and is the reference; the proposal's "about 0.25" is an estimate only.
+
+Pre-registered metric: `/outage_sweep/undetected_share_by_miss_rate/0.5`.
+Expected: rises to about 0.25 (expected_range 0.22 to 0.29).
+
+Falsifier: measured share at q=0.5 differs from the analytic share by more than 0.03, or shares are not
+strictly increasing in q, or any cut shorter than the last published checkpoint goes undetected.
+
+Command: `cargo run --locked -q --release -- outagesweep --seed 7 --chains 2000 --len 64 --period 8 --out results/760-outagesweep.json`

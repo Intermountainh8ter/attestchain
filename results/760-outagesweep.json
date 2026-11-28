@@ -1,0 +1,55 @@
+{
+  "chains": 2000,
+  "len": 64,
+  "outage_sweep": {
+    "analytic_share_by_miss_rate": {
+      "0": 0.12698412698412698,
+      "0.1": 0.1410934714285714,
+      "0.25": 0.16930861700148808,
+      "0.5": 0.25285218253968256,
+      "0.75": 0.45496671161954366,
+      "0.9": 0.7156242269841266
+    },
+    "median_undetected_suffix_len_by_miss_rate": {
+      "0": 5,
+      "0.1": 5,
+      "0.25": 6,
+      "0.5": 8,
+      "0.75": 16,
+      "0.9": 25
+    },
+    "undetected_before_last_published_count_by_miss_rate": {
+      "0": 0,
+      "0.1": 0,
+      "0.25": 0,
+      "0.5": 0,
+      "0.75": 0,
+      "0.9": 0
+    },
+    "undetected_share_by_miss_rate": {
+      "0": 0.1305,
+      "0.1": 0.1415,
+      "0.25": 0.1695,
+      "0.5": 0.248,
+      "0.75": 0.4465,
+      "0.9": 0.7015
+    }
+  },
+  "period": 8,
+  "provenance": {
+    "command": "cargo run --locked -q --release -- outagesweep --seed 7 --chains 2000 --len 64 --period 8 --out results/760-outagesweep.json",
+    "data_sources": [
+      {
+        "license": "MIT (own code)",
+        "url": "synthetic: seeded in-process generator, no external data"
+      }
+    ],
+    "hardware": "linux x86_64 (cpu only)",
+    "seeds": [
+      7
+    ],
+    "started_at": "2026-11-28T00:57:42Z",
+    "wall_s": 0.291528475
+  },
+  "seed": 7
+}

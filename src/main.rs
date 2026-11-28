@@ -93,6 +93,19 @@ enum Cmd {
         #[arg(long)]
         out: std::path::PathBuf,
     },
+    /// Model-free outage sweep: undetected share by checkpoint miss rate.
+    Outagesweep {
+        #[arg(long)]
+        seed: u64,
+        #[arg(long)]
+        chains: usize,
+        #[arg(long)]
+        len: usize,
+        #[arg(long)]
+        period: usize,
+        #[arg(long)]
+        out: std::path::PathBuf,
+    },
     /// Model-free truncation sweep: undetected share by checkpoint period.
     Truncsweep {
         #[arg(long)]
@@ -404,6 +417,33 @@ fn main() -> anyhow::Result<()> {
             if let Some(dir) = out.parent() { std::fs::create_dir_all(dir)?; }
             std::fs::write(&out, serde_json::to_string_pretty(&v)?)?;
             println!("{}", serde_json::to_string_pretty(&v["truncation_sweep"])?);
+        }
+        Cmd::Outagesweep { seed, chains, len, period, out } => {
+            let started = std::time::SystemTime::now();
+            let t0 = std::time::Instant::now();
+            let mut v = attestchain::outagesweep::run(seed, chains, len, period);
+            let ts = started.duration_since(std::time::UNIX_EPOCH)?.as_secs();
+            let (days, rem) = (ts / 86400, ts % 86400);
+            let z = days as i64 + 719468;
+            let era = z / 146097;
+            let doe = z - era * 146097;
+            let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+            let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+            let mp = (5 * doy + 2) / 153;
+            let d = doy - (153 * mp + 2) / 5 + 1;
+            let m = if mp < 10 { mp + 3 } else { mp - 9 };
+            let y = yoe + era * 400 + if m <= 2 { 1 } else { 0 };
+            v["provenance"] = serde_json::json!({
+                "started_at": format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z", y, m, d, rem / 3600, rem % 3600 / 60, rem % 60),
+                "seeds": [seed],
+                "command": format!("cargo run --locked -q --release -- outagesweep --seed {seed} --chains {chains} --len {len} --period {period} --out results/760-outagesweep.json"),
+                "hardware": format!("{} {} (cpu only)", std::env::consts::OS, std::env::consts::ARCH),
+                "wall_s": t0.elapsed().as_secs_f64(),
+                "data_sources": [{"url": "synthetic: seeded in-process generator, no external data", "license": "MIT (own code)"}],
+            });
+            if let Some(dir) = out.parent() { std::fs::create_dir_all(dir)?; }
+            std::fs::write(&out, serde_json::to_string_pretty(&v)?)?;
+            println!("{}", serde_json::to_string_pretty(&v["outage_sweep"])?);
         }
         Cmd::Version => println!("attestchain {}", env!("CARGO_PKG_VERSION")),
     }
