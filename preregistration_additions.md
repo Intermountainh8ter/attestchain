@@ -129,3 +129,24 @@ Falsifier: measured share at q=0.5 differs from the analytic share by more than 
 strictly increasing in q, or any cut shorter than the last published checkpoint goes undetected.
 
 Command: `cargo run --locked -q --release -- outagesweep --seed 7 --chains 2000 --len 64 --period 8 --out results/760-outagesweep.json`
+
+## 2026-11-28T01:01:46Z forksweep proposal:224a5672b35695815eab6dcb6cda2c099bb06cd2588ad6810e6eb077e12e57c9
+
+Hypothesis: with gossip probability 0.1 per reader per round, readers assigned uniformly at random to one of two
+branches, 100 rounds and 2000 trials per reader count, the median detection round among detected forks at R=8
+readers is between 1 and 3 and non-increasing across R in 2,4,8,16; the detected share at 100 rounds is within 0.03
+of the analytic share (1 - 2^(1-R), the never-split case being undetectable); and single-log verification detects
+the fork in 0 of all trials.
+
+Model fixed before running: a writer serves two histories sharing a 4-record prefix and diverging for 4 more
+records, each valid on its own. Each reader sees one branch. Each round, each reader independently gossips with
+probability 0.1 to a uniformly random other reader; the fork is detected in the first round where any gossip pairs
+readers holding different branch heads. The run also reports an exact finite-round analytic share for reference.
+
+Pre-registered metric: `/fork_sweep/median_detection_round_by_readers/8`.
+Expected: about 2 (expected_range 1 to 3), decreasing with R.
+
+Falsifier: detected share differs from 1 - 2^(1-R) by more than 0.03 at any R, or the median detection round
+increases with R, or single-log verification detects any fork.
+
+Command: `cargo run --locked -q --release -- forksweep --seed 7 --trials 2000 --rounds 100 --gossip 0.1 --out results/761-forksweep.json`

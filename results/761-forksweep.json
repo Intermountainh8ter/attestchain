@@ -1,0 +1,54 @@
+{
+  "fork_sweep": {
+    "analytic_exact_share_by_readers": {
+      "16": 0.9999694824213057,
+      "2": 0.49999999964724606,
+      "4": 0.8749999994911672,
+      "8": 0.9921874999298759
+    },
+    "analytic_limit_share_by_readers": {
+      "16": 0.999969482421875,
+      "2": 0.5,
+      "4": 0.875,
+      "8": 0.9921875
+    },
+    "detected_share_by_readers": {
+      "16": 1.0,
+      "2": 0.483,
+      "4": 0.8945,
+      "8": 0.992
+    },
+    "median_detection_round_by_readers": {
+      "16": 1,
+      "2": 4,
+      "4": 3,
+      "8": 2
+    },
+    "single_log_detected_count_by_readers": {
+      "16": 0,
+      "2": 0,
+      "4": 0,
+      "8": 0
+    },
+    "single_log_detected_total": 0
+  },
+  "gossip": 0.1,
+  "provenance": {
+    "command": "cargo run --locked -q --release -- forksweep --seed 7 --trials 2000 --rounds 100 --gossip 0.1 --out results/761-forksweep.json",
+    "data_sources": [
+      {
+        "license": "MIT (own code)",
+        "url": "synthetic: seeded in-process generator, no external data"
+      }
+    ],
+    "hardware": "linux x86_64 (cpu only)",
+    "seeds": [
+      7
+    ],
+    "started_at": "2026-11-28T01:01:57Z",
+    "wall_s": 0.377415736
+  },
+  "rounds": 100,
+  "seed": 7,
+  "trials": 2000
+}

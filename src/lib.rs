@@ -14,6 +14,7 @@
 pub mod canonbench;
 pub mod chainbench;
 pub mod classbench;
+pub mod forksweep;
 pub mod http;
 pub mod logcost;
 pub mod outagesweep;

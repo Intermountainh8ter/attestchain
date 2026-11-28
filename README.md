@@ -138,3 +138,14 @@ against an analytic 0.25285218253968256 (`/outage_sweep/analytic_share_by_miss_r
 (`/outage_sweep/undetected_share_by_miss_rate/0`). The median undetected suffix is 8 records at q=0.5
 (`/outage_sweep/median_undetected_suffix_len_by_miss_rate/0.5`). No cut shorter than the last published checkpoint
 went undetected. Limit: synthetic logs, independent misses; real outages are bursty.
+
+## Fork detection by gossip (synthetic, model-free)
+
+`attestchain forksweep --seed 7 --trials 2000 --rounds 100 --gossip 0.1 --out results/761-forksweep.json`
+serves two valid divergent histories to R readers, each assigned to one branch at random; readers detect the fork
+only when a gossip exchange pairs readers holding different heads. At R=8 the median detection round is 2
+(`/fork_sweep/median_detection_round_by_readers/8`) and the detected share is 0.992
+(`/fork_sweep/detected_share_by_readers/8`) against an analytic 0.9921875
+(`/fork_sweep/analytic_limit_share_by_readers/8`). Single-log verification detected 0 forks
+(`/fork_sweep/single_log_detected_total`). Limit: synthetic logs, uniform gossip partners, no adversarial
+reader placement.
